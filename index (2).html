@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Şifreli Raylar: Antik Hazine Ekspresi</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--navy:#0F172A;--teal:#0D9488;--coral:#F97316;--ink:#1E293B;--ok:#10B981;--bad:#EF4444;--line:#E2E8F0;--mono:ui-monospace,'Cascadia Mono',Consolas,'Courier New',monospace}
+*{box-sizing:border-box}
+[hidden]{display:none !important}
+html,body{margin:0}
+body{background-color:#F4F7FB;background-image:linear-gradient(rgba(30,41,59,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(30,41,59,.05) 1px,transparent 1px);background-size:22px 22px;color:var(--ink);font-family:'Segoe UI',system-ui,-apple-system,Roboto,Arial,sans-serif;min-height:100vh;line-height:1.45}
+button{font-family:inherit}
+.muted{color:#475569;font-size:.85rem}
+
+/* HUD */
+.hud{background:var(--navy);color:#fff;box-shadow:0 4px 14px rgba(15,23,42,.3)}
+.hud-title{font-size:1.1rem;font-weight:800;letter-spacing:.04em;margin:0}
+.hud-sub{margin:0;font-size:.75rem;opacity:.8}
+.stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:.3rem .7rem;display:flex;flex-direction:column;min-width:5rem}
+.stat-l{font-size:.64rem;text-transform:uppercase;letter-spacing:.07em;opacity:.75}
+.stat-v{font-weight:800;font-size:.98rem;font-family:var(--mono)}
+.modetag{background:var(--teal);color:#fff;font-weight:800;font-size:.8rem;border-radius:999px;padding:.35rem .8rem;align-self:center;white-space:nowrap}
+.hud-bar{height:5px;background:rgba(255,255,255,.15)}
+#hudBar{height:100%;width:0;background:var(--coral);transition:width .5s ease}
+
+/* Paneller */
+.sheet{background:#fff;border-radius:14px;border:1px solid var(--line);box-shadow:0 6px 18px rgba(15,23,42,.08);overflow:hidden}
+.sheet-h{background:var(--navy);color:#fff;padding:.6rem .95rem;font-weight:800;font-size:.92rem;display:flex;align-items:center;gap:.5rem}
+.sheet-b{padding:.95rem}
+.sub-h{font-weight:800;color:var(--navy);font-size:.88rem;margin:.9rem 0 .4rem}
+
+/* Butonlar */
+.btn{border:0;border-radius:10px;padding:.6rem 1rem;font-weight:800;font-size:.9rem;cursor:pointer;transition:transform .15s,box-shadow .2s,opacity .2s;display:inline-flex;align-items:center;justify-content:center;gap:.4rem}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 14px rgba(15,23,42,.2)}
+.btn:focus-visible,.sw:focus-visible,.mbtn:focus-visible,.dg:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--navy);color:#fff}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-coral{background:var(--coral);color:var(--navy)}
+.btn-ok{background:var(--ok);color:var(--navy)}
+.btn-bad{background:var(--bad);color:#fff}
+.btn-ghost{background:#fff;color:var(--navy);border:2px solid var(--navy)}
+.btn.on{background:var(--teal);color:#fff}
+
+/* Hat görünümü */
+.scene{position:relative;height:170px;overflow:hidden;background:linear-gradient(#EAF2FB,#F4F7FB 70%);border-bottom:1px solid var(--line)}
+.sun{position:absolute;right:12%;top:14px;width:34px;height:34px;border-radius:50%;background:var(--coral);opacity:.25}
+.mount{position:absolute;left:42%;width:26%;top:18px;bottom:34px;background:linear-gradient(#334155,#1E293B);border-radius:46% 46% 6px 6px/70% 70% 6px 6px;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4rem;box-shadow:0 8px 18px rgba(15,23,42,.35)}
+.mt-label{color:#CBD5E1;font-size:.62rem;font-weight:800;letter-spacing:.12em;text-align:center}
+.lamps{display:flex;gap:5px;flex-wrap:wrap;justify-content:center;padding:0 .4rem}
+.lamp{width:20px;height:20px;border-radius:50%;background:#475569;border:2px solid #64748B;display:grid;place-items:center;font-size:.55rem;font-weight:800;color:#CBD5E1;font-family:var(--mono);transition:all .3s}
+.lamp.ok{background:var(--ok);border-color:#A7F3D0;color:var(--navy);box-shadow:0 0 10px var(--ok)}
+.lamp.bad{background:var(--bad);border-color:#FECACA;color:#fff;box-shadow:0 0 10px var(--bad)}
+.lamp.sel{border-color:var(--coral);color:#fff}
+.track{position:absolute;left:0;right:0;bottom:22px;height:10px;background:repeating-linear-gradient(90deg,#94A3B8 0 6px,transparent 6px 16px);opacity:.9;z-index:1}
+.track::before{content:'';position:absolute;left:0;right:0;top:-3px;height:3px;background:#64748B}
+.train{position:absolute;left:8px;bottom:28px;display:flex;align-items:flex-end;z-index:2;font-size:clamp(1.5rem,5vw,2.2rem)}
+.train .loco{display:inline-block;transform:scaleX(-1);line-height:1}
+.wagon{background:#fff;border:2px solid var(--navy);border-radius:6px;padding:.1rem .45rem;margin-right:3px;text-align:center;font-size:.6em;position:relative;box-shadow:0 2px 0 var(--navy)}
+.wagon small{display:block;font-size:.5em;color:#475569;letter-spacing:.05em;font-weight:700}
+.wagon b{font-family:var(--mono);color:var(--coral);text-shadow:0 0 1px var(--navy)}
+.train.derail{animation:derail .6s}
+@keyframes derail{0%,100%{margin-left:0}20%{margin-left:-8px}40%{margin-left:8px}60%{margin-left:-5px}80%{margin-left:5px}}
+.signal{position:absolute;left:14px;top:12px;display:flex;align-items:center;gap:.45rem;z-index:4;background:#fff;border:1px solid var(--line);border-radius:999px;padding:.2rem .6rem .2rem .3rem;font-size:.72rem;font-weight:800}
+.signal i{width:16px;height:16px;border-radius:50%;background:#94A3B8;display:inline-block;transition:all .3s}
+.signal.ok i{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+.signal.bad i{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+.crate-tag{position:absolute;right:14px;top:12px;z-index:4;background:#fff;border:2px solid var(--coral);border-radius:10px;padding:.2rem .7rem;text-align:center}
+.crate-tag small{display:block;font-size:.62rem;font-weight:800;color:#475569;letter-spacing:.06em}
+.crate-tag b{font-family:var(--mono);font-size:1.35rem;color:var(--coral);line-height:1.1}
+
+/* Vagon dedektif araçları */
+.numbox{font-family:var(--mono);font-weight:800;font-size:clamp(2.2rem,7vw,3.1rem);display:flex;justify-content:center;align-items:flex-end;min-height:5rem;padding:.4rem .2rem;color:var(--navy);background:repeating-linear-gradient(0deg,transparent 0 23px,rgba(30,41,59,.06) 23px 24px);border:2px dashed #CBD5E1;border-radius:12px;margin:.5rem 0;user-select:none;-webkit-user-select:none}
+.dg{display:inline-block;padding:0 .06em;border-radius:8px;transition:all .3s ease;line-height:1.25}
+.dg[role="button"]{cursor:zoom-in}
+.dot{color:#94A3B8;align-self:flex-end;padding:0 .02em}
+.dg.big{color:var(--coral);font-size:1.45em;background:rgba(249,115,22,.14);text-shadow:0 0 14px rgba(249,115,22,.55)}
+.dg.ring{background:rgba(13,148,136,.1);border-top:3px solid var(--teal);border-bottom:3px solid var(--teal);border-radius:0}
+.dg.ring.fl{border-left:3px solid var(--teal);border-radius:10px 0 0 10px}
+.dg.ring.fr{border-right:3px solid var(--teal);border-radius:0 10px 10px 0}
+.dg.split{margin:0 .12em;transform:translateY(8px);background:#F1F5F9;box-shadow:0 2px 0 #CBD5E1}
+.dg.split.on{background:var(--teal);color:#fff;transform:translateY(-4px);box-shadow:0 4px 10px rgba(13,148,136,.45)}
+.tb{border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:10px;padding:.55rem .7rem;margin-top:.5rem;background:#F8FAFC;font-size:.86rem;animation:fadeUp .3s ease}
+.tb h4{margin:0 0 .25rem;font-size:.84rem;color:var(--navy)}
+.chip{display:inline-block;border-radius:8px;padding:.1rem .55rem;margin:.1rem .2rem .1rem 0;font-weight:800;font-family:var(--mono);font-size:.85rem;border:2px solid #CBD5E1;color:#94A3B8;background:#fff;transition:all .3s}
+.chip.lit{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:0 0 10px rgba(13,148,136,.55)}
+.sumln{font-family:var(--mono);font-weight:800;color:var(--navy);word-break:break-word}
+.scl{width:100%;max-width:200px;height:70px;display:block;margin:.2rem auto}
+.beam{transform-origin:80px 22px;transform:rotate(-9deg);transition:transform 1s ease}
+.beam.lvl{transform:rotate(0deg)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+details.rule{border:1px solid var(--line);border-radius:10px;margin-bottom:.35rem;background:#fff}
+details.rule summary{cursor:pointer;padding:.4rem .7rem;font-weight:800;color:var(--navy);font-size:.85rem}
+details.rule p{margin:0;padding:0 .7rem .55rem;font-size:.82rem}
+
+/* Ray haritası */
+.mbtn{border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:10px;padding:.32rem .75rem;font-weight:800;font-family:var(--mono);cursor:pointer;transition:all .2s}
+.mbtn[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:0 3px 10px rgba(13,148,136,.45)}
+.rails{--g:8px;display:grid;grid-template-columns:repeat(10,1fr);gap:var(--g);margin-top:.8rem;padding:.4rem 0}
+.cell{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border-radius:8px;background:#fff;border:2px solid #CBD5E1;font-weight:700;font-family:var(--mono);font-size:clamp(.6rem,1.6vw,.95rem);color:var(--ink);transition:background .35s,color .35s,border-color .35s,box-shadow .35s,transform .35s}
+.cell::after{content:'';position:absolute;left:100%;top:calc(50% - 2px);width:var(--g);height:4px;background:#CBD5E1;transition:background .35s;transition-delay:inherit;pointer-events:none}
+.cell:nth-child(10n)::after{display:none}
+.cell.lit{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:0 0 12px rgba(13,148,136,.6);transform:scale(1.05)}
+.cell.lit::after,.cell.part::after,.cell.x::after{background:var(--teal)}
+.cell.part{background:#CCFBF1;border-color:var(--teal);color:var(--navy);box-shadow:0 0 8px rgba(13,148,136,.35)}
+.cell.x{background:var(--coral);border-color:var(--coral);color:var(--navy);box-shadow:0 0 14px rgba(249,115,22,.65);transform:scale(1.1);z-index:1}
+.cell.x::before{content:'×' attr(data-tag);position:absolute;top:-9px;right:-7px;background:var(--navy);color:#fff;border-radius:999px;font-size:.55rem;padding:0 .3rem;line-height:1.4}
+.infer{background:#FFF7ED;border:1px solid var(--coral);border-radius:10px;padding:.6rem .8rem;margin-top:.7rem;font-size:.87rem;min-height:3rem}
+.infer p{margin:.2rem 0;animation:fadeUp .3s ease}
+.key{font-weight:800;color:var(--navy)}
+
+/* Tünel anahtarları */
+.sw{position:relative;border:2px solid var(--navy);background:#fff;color:var(--navy);border-radius:12px;padding:.55rem .2rem .4rem;font-weight:800;font-size:.95rem;cursor:pointer;transition:transform .15s,background .25s,box-shadow .25s,color .25s;text-align:center;line-height:1.15}
+.sw:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 14px rgba(15,23,42,.18)}
+.sw b{display:block;font-family:var(--mono);font-size:1.35rem}
+.sw .led{display:block;width:11px;height:11px;border-radius:50%;background:#CBD5E1;margin:.3rem auto .1rem;transition:all .25s}
+.sw small{display:block;font-size:.58rem;letter-spacing:.05em;min-height:.8rem}
+.sw[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:#fff;box-shadow:0 4px 12px rgba(13,148,136,.45)}
+.sw[aria-pressed="true"] .led{background:#CCFBF1;box-shadow:0 0 8px #fff}
+.sw.ok{background:var(--ok);border-color:var(--ok);color:var(--navy);box-shadow:0 0 0 3px rgba(16,185,129,.25),0 0 16px rgba(16,185,129,.55)}
+.sw.ok .led{background:#fff;box-shadow:0 0 9px #fff}
+.sw.bad{background:#FEE2E2;border-color:var(--bad);color:#991B1B;animation:shake .45s}
+.sw.bad .led{background:var(--bad);box-shadow:0 0 9px var(--bad)}
+.sw:disabled{cursor:default}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.card{border-radius:10px;padding:.55rem .75rem;font-size:.85rem;border:2px solid;margin-top:.45rem;animation:fadeUp .3s ease}
+.card.bad{background:#FEF2F2;border-color:var(--bad);color:#7F1D1D}
+.card.ok{background:#ECFDF5;border-color:var(--ok);color:#065F46}
+.card.info{background:#F1F5F9;border-color:#CBD5E1;color:var(--ink)}
+.card.warn{background:#FFF7ED;border-color:var(--coral);color:#7C2D12}
+.card b.t{display:block}
+
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.7);display:flex;align-items:center;justify-content:center;padding:.8rem;z-index:100;overflow-y:auto}
+.modal-card{width:100%;max-width:640px;max-height:94vh;overflow-y:auto;animation:fadeUp .35s ease}
+.tree{display:flex;flex-direction:column;align-items:center}
+.tnode{border:2px solid #CBD5E1;border-radius:12px;padding:.55rem .8rem;background:#F8FAFC;max-width:100%;text-align:center;font-size:.9rem;transition:all .3s}
+.tnode.root{background:var(--navy);color:#fff;border-color:var(--navy)}
+.tnode.active{border-color:var(--coral);background:#FFF7ED;box-shadow:0 0 14px rgba(249,115,22,.4);font-weight:700}
+.tnode.ok{border-color:var(--ok);background:#ECFDF5}
+.tnode.bad{border-color:var(--bad);background:#FEF2F2}
+.tnode.remedy{border-style:dashed;border-color:var(--bad);background:#fff;color:#7F1D1D;animation:fadeUp .3s ease}
+.tnode.final{background:var(--coral);border-color:var(--coral);color:var(--navy);font-weight:800}
+.tnode .tn{background:var(--navy);color:#fff;border-radius:6px;padding:0 .4rem;font-size:.72rem;margin-right:.3rem}
+.tline{width:3px;height:16px;background:#CBD5E1}
+.tline.on{background:var(--teal)}
+.tbranch{font-size:.74rem;font-weight:800;padding:.1rem .5rem}
+.tbranch.bad{color:var(--bad)}
+.tbranch.ok{color:#047857}
+.badge-art{display:grid;place-items:center;margin:.4rem 0}
+.statgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:.5rem;margin:.7rem 0}
+.sg{background:#F8FAFC;border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem}
+.sg small{display:block;font-size:.7rem;color:#475569;text-transform:uppercase;letter-spacing:.05em}
+.sg b{font-size:1.2rem;color:var(--navy);font-family:var(--mono)}
+#toasts{position:fixed;right:.8rem;bottom:.8rem;z-index:120;display:flex;flex-direction:column;gap:.4rem;max-width:min(92vw,20rem);pointer-events:none}
+.toast{background:var(--navy);color:#fff;border-left:5px solid var(--coral);border-radius:10px;padding:.55rem .8rem;font-size:.85rem;font-weight:700;box-shadow:0 8px 20px rgba(15,23,42,.35);animation:fadeUp .3s ease}
+.toast.ok{border-left-color:var(--ok)}
+@media (max-width:640px){
+  .hud-title{font-size:.95rem}
+  .stat{min-width:4.2rem;padding:.25rem .5rem}
+  .crate-tag b{font-size:1.05rem}
+  .signal{font-size:.65rem}
+  .rails{--g:4px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<noscript>Bu oyunun çalışması için tarayıcınızda JavaScript açık olmalıdır.</noscript>
+
+<header class="hud">
+  <div class="max-w-[1500px] mx-auto px-3 py-3 flex flex-wrap items-center gap-x-6 gap-y-2">
+    <div class="flex items-center gap-3">
+      <svg width="42" height="42" viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="22" width="30" height="14" rx="3" fill="#0D9488"/><rect x="26" y="12" width="14" height="24" rx="3" fill="#F97316"/><rect x="29" y="16" width="8" height="7" rx="1" fill="#F4F7FB"/><rect x="8" y="14" width="6" height="8" fill="#F4F7FB"/><circle cx="12" cy="38" r="5" fill="#fff" stroke="#0F172A" stroke-width="2"/><circle cx="30" cy="38" r="5" fill="#fff" stroke="#0F172A" stroke-width="2"/><rect x="2" y="43" width="44" height="2" fill="#94A3B8"/></svg>
+      <div>
+        <h1 class="hud-title">ŞİFRELİ RAYLAR: ANTİK HAZİNE EKSPRESİ</h1>
+        <p class="hud-sub">Bölünebilme Kuralları Simülasyonu · MAT.6.1.2</p>
+      </div>
+    </div>
+    <div class="flex flex-wrap gap-2 flex-1 xl:justify-end">
+      <div class="stat"><span class="stat-l">Sandık</span><span class="stat-v" id="hudCrate">1/5</span></div>
+      <div class="stat"><span class="stat-l">Teslim Edilen</span><span class="stat-v" id="hudDone">0/5</span></div>
+      <div class="stat"><span class="stat-l">İlk Deneme Başarısı</span><span class="stat-v" id="hudAcc">—</span></div>
+      <div class="stat"><span class="stat-l">Deneme Sayısı</span><span class="stat-v" id="hudTry">0</span></div>
+      <div class="stat"><span class="stat-l">Hazine Puanı</span><span class="stat-v" id="hudScore">0</span></div>
+      <span class="modetag" title="Süre sınırı yok">🌿 Sakin Mod · Süre Yok</span>
+    </div>
+  </div>
+  <div class="hud-bar"><div id="hudBar"></div></div>
+</header>
+
+<main class="max-w-[1500px] mx-auto px-3 py-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-12 gap-4">
+
+  <!-- HAT GÖRÜNÜMÜ -->
+  <section class="sheet order-1 md:col-span-2 xl:col-span-12" aria-label="Hat görünümü">
+    <div class="scene" id="scene">
+      <div class="sun"></div>
+      <div class="signal" id="signal"><i></i><span id="signalTxt">Sinyal: Bekliyor</span></div>
+      <div class="crate-tag"><small>GELEN SANDIK</small><b id="crateNum">—</b></div>
+      <div class="mount">
+        <div class="lamps" id="lamps" aria-label="Tünel kilit lambaları"></div>
+        <span class="mt-label">ANTİK TÜNEL GEÇİDİ</span>
+      </div>
+      <div class="track"></div>
+      <div class="train" id="train"><span class="wagon"><small>SANDIK</small><b id="trainNum">—</b></span><span class="loco" aria-hidden="true">🚂</span></div>
+    </div>
+  </section>
+
+  <!-- SOL: VAGON DEDEKTİF ARAÇLARI -->
+  <section class="sheet order-3 xl:order-2 xl:col-span-3" aria-labelledby="t-left">
+    <div class="sheet-h" id="t-left">🔍 Vagon Dedektif Araçları</div>
+    <div class="sheet-b">
+      <p class="muted" style="margin:0">Sandık numarasını incele. Üç araçtan istediğini, istediğin kadar kullan.</p>
+      <div id="numBox" class="numbox" aria-label="Sandık numarası"></div>
+      <div class="flex flex-wrap gap-2">
+        <button class="btn btn-ghost" id="btnLens" aria-pressed="false">🔍 Canlı Büyüteç</button>
+        <button class="btn btn-ghost" id="btnRing" aria-pressed="false">⭕ Çift Halka</button>
+        <button class="btn btn-ghost" id="btnScale" aria-pressed="false">⚖️ Rakam Terazisi</button>
+      </div>
+      <p class="muted" style="margin:.4rem 0 0">İpucu: sayının birler basamağına tıklayarak da büyüteci açabilirsin.</p>
+      <div id="toolOut" aria-live="polite"></div>
+      <div class="sub-h">Kural Kartları</div>
+      <div id="ruleCards"></div>
+    </div>
+  </section>
+
+  <!-- ORTA: RAY HARİTASI -->
+  <section class="sheet order-4 md:col-span-2 xl:order-3 xl:col-span-5" aria-labelledby="t-mid">
+    <div class="sheet-h" id="t-mid">🗺️ İnteraktif Ray Haritası (1–100)</div>
+    <div class="sheet-b">
+      <p class="muted" style="margin:0 0 .5rem">Bir veya birkaç tünel seç: katlar ray hattı boyunca aydınlanır. İki tüneli birlikte seçersen kesişim noktalarına dikkat et!</p>
+      <div id="mapBtns" class="flex flex-wrap gap-2 items-center"></div>
+      <div id="rails" class="rails" role="grid" aria-label="1'den 100'e ray haritası"></div>
+      <div id="mapInfo" class="infer" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- SAĞ: TÜNEL PERONLARI -->
+  <section class="sheet order-2 xl:order-4 xl:col-span-4" aria-labelledby="t-right">
+    <div class="sheet-h" id="t-right">🚉 Tünel Peronları &amp; Makas Kontrolü</div>
+    <div class="sheet-b">
+      <p class="muted" style="margin:0 0 .6rem">Sandık numarası hangi tünellere <b>tam bölünüyorsa</b> o anahtarları çevir, sonra treni sür. Uzun bölme yok; kuralları kullan!</p>
+      <div id="switches" class="grid grid-cols-4 gap-2"></div>
+      <div class="flex flex-col gap-2 mt-3">
+        <button class="btn btn-primary" id="btnDrive">🚦 Makası Çevir &amp; Treni Sür</button>
+        <button class="btn btn-ok" id="btnNext" disabled>Sonraki Sandık ▶</button>
+      </div>
+      <div id="reason" aria-live="polite">
+        <div class="card info"><b class="t">🧭 Nasıl oynanır?</b>Anahtarları seç ve treni sür. Hata yaparsan tren raydan çıkmaz, sadece sana nedenini açıklarız. Süre yok!</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toasts" aria-live="polite"></div>
+
+<!-- Değerlendirme -->
+<div class="modal" id="treeModal" role="dialog" aria-modal="true" aria-labelledby="treeT" hidden>
+  <div class="sheet modal-card">
+    <div class="sheet-h" id="treeT">🌳 Tanılayıcı Dallanmış Ağaç</div>
+    <div class="sheet-b">
+      <p class="muted" style="margin:0 0 .6rem">5 sandığı da teslim ettin! Son kontrol: her ifade için Doğru ya da Yanlış dalını seç.</p>
+      <div id="treeBox" class="tree"></div>
+      <div id="treeCtl" style="margin-top:.8rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Rozet -->
+<div class="modal" id="badgeModal" role="dialog" aria-modal="true" aria-labelledby="bdT" hidden>
+  <div class="sheet modal-card" style="max-width:520px">
+    <div class="sheet-h" id="bdT" style="background:var(--teal)">🏅 Bölüm Tamamlandı!</div>
+    <div class="sheet-b" id="badgeBody"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+const PORTS=[2,3,4,5,6,9,10];
+const RULE_CARDS={
+  2:'Birler basamağı 0, 2, 4, 6 veya 8 ise sayı 2\'ye bölünür.',
+  3:'Rakamları toplamı 3\'ün katı ise sayı 3\'e bölünür.',
+  4:'Son iki basamak 4\'ün katı (veya 00) ise sayı 4\'e bölünür.',
+  5:'Birler basamağı 0 veya 5 ise sayı 5\'e bölünür.',
+  6:'Hem 2\'ye hem 3\'e bölünüyorsa sayı 6\'ya bölünür.',
+  9:'Rakamları toplamı 9\'un katı ise sayı 9\'a bölünür.',
+  10:'Birler basamağı 0 ise sayı 10\'a bölünür.'
+};
+const STEPS=[
+  {q:'Bir sayı 4 ile bölünüyorsa, bu sayı 2 ile de bölünür.',ans:true,
+   ok:'Doğru! 4 = 2 × 2 olduğundan 4\'ün katları hep çifttir. Örnek: 28 hem 4\'e hem 2\'ye bölünür.',
+   bad:'Düşün: 4\'ün katları 4, 8, 12, 16… hepsi çift. 4 = 2 × 2 olduğu için 4\'e bölünen her sayı 2\'ye de bölünür.'},
+  {q:'Bir sayı 3 ile bölünüyorsa, bu sayı 9 ile de bölünür.',ans:false,
+   ok:'Doğru! Ters yön her zaman çalışmaz: 12, 3\'e bölünür ama 9\'a bölünmez (1 + 2 = 3, 9\'un katı değil).',
+   bad:'Bir örnek dene: 12 sayısı 3\'e bölünür (1 + 2 = 3) ama 9\'a bölünmez. 9\'a bölünen her sayı 3\'e bölünür; fakat tersi her zaman doğru değildir.'}
+];
+
+const $=function(id){return document.getElementById(id);};
+function rand(a,b){return Math.floor(Math.random()*(b-a+1))+a;}
+function fmt(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');}
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function lcmAll(arr){return arr.reduce(function(a,b){return a*b/gcd(a,b);},1);}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rand(0,i);const t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+const S={};
+let scaleTimer=null, trainAnim=null;
+const T={step:0,wrong:false,done:false,firstTry:[true,true]};
+
+function freshState(){
+  Object.assign(S,{idx:0,crates:[],sel:new Set(),map:new Set(),mapFlip:0,done:[],first:[],attempts:0,crateTries:0,score:0,
+    locked:false,running:false,tl:{lens:false,ring:false,scale:false,idx:-1}});
+}
+function cur(){return S.crates[S.idx];}
+
+function buildCrates(){
+  const out=[54120], used=new Set(out);
+  const Ls=shuffle([45,12,36,20]);
+  Ls.forEach(function(L,i){
+    const lo=i<2?1000:10000, hi=i<2?9999:99999;
+    let n, g=0;
+    do{ n=L*rand(Math.ceil(lo/L),Math.floor(hi/L)); g++; }while(used.has(n)&&g<60);
+    used.add(n); out.push(n);
+  });
+  return out;
+}
+
+function explain(n,d){
+  const s=String(n), ds=s.split('').map(Number);
+  const sum=ds.reduce(function(a,b){return a+b;},0);
+  const last=ds[ds.length-1], tw=s.slice(-2), two=parseInt(tw,10), expr=ds.join(' + ');
+  const ok=(n%d===0); let t='';
+  switch(d){
+    case 2: t=ok?`Birler basamağı ${last} (çift rakam) → sayı 2'ye bölünür.`:`Birler basamağı ${last} (tek rakam). 0, 2, 4, 6 veya 8 olmadığı için sayı 2'ye bölünmez.`;break;
+    case 3: t=ok?`${expr} = ${sum} → ${sum} = 3 × ${sum/3}, yani 3'ün katı → sayı 3'e bölünür.`:`${expr} = ${sum}. ${sum}, 3'ün katı değil (kalan ${sum%3}) → sayı 3'e bölünmez.`;break;
+    case 4: t=ok?`Son iki basamak ${tw} → ${two===0?'00 her zaman 4\'ün katıdır':two+' = 4 × '+(two/4)} → sayı 4'e bölünür.`:`Son iki basamak ${tw}. ${two} ÷ 4 işleminde kalan ${two%4}, yani 4'ün katı değil → sayı 4'e bölünmez.`;break;
+    case 5: t=ok?`Birler basamağı ${last} (0 veya 5) → sayı 5'e bölünür.`:`Birler basamağı ${last}. 5'e bölünmek için birler basamağı 0 veya 5 olmalı.`;break;
+    case 10: t=ok?`Birler basamağı 0 → sayı 10'a bölünür.`:(last===5?`Birler basamağı 5: sayı 5'e bölünür ama 10'a bölünmez. 10 için sayı hem 2'ye hem 5'e bölünmeli (sonu 0 olmalı).`:`Birler basamağı ${last}. 10'a bölünmek için birler basamağı 0 olmalı.`);break;
+    case 9: t=ok?`${expr} = ${sum} → ${sum} = 9 × ${sum/9} → sayı 9'a bölünür.`:`${expr} = ${sum}. ${sum}, 9'un katı değil (kalan ${sum%9}) → sayı 9'a bölünmez.`+(sum%3===0?` Dikkat: toplam 3'ün katı, yani sayı 3'e bölünür ama 9'a bölünmez.`:'');break;
+    case 6:{
+      const even=(last%2===0), three=(sum%3===0);
+      if(ok) t=`Birler basamağı ${last} (çift) → 2'ye bölünür; rakamlar toplamı ${sum} → 3'e bölünür. Hem 2'ye hem 3'e bölündüğü için 6'ya bölünür.`;
+      else if(!even&&!three) t=`Sayı ne 2'ye (birler basamağı ${last} tek) ne de 3'e (rakamlar toplamı ${sum}) bölünüyor → 6'ya bölünmez.`;
+      else if(!even) t=`Rakamlar toplamı ${sum} olduğundan 3'e bölünür ama birler basamağı ${last} tek olduğu için 2'ye bölünmez → 6'ya bölünmez.`;
+      else t=`Birler basamağı ${last} olduğundan 2'ye bölünür ama rakamlar toplamı ${sum}, 3'ün katı değil → 6'ya bölünmez.`;
+      break;}
+  }
+  return {ok:ok,text:t};
+}
+
+function toast(msg,type){
+  const el=document.createElement('div');
+  el.className='toast '+(type||'');
+  el.textContent=msg;
+  $('toasts').appendChild(el);
+  setTimeout(function(){if(el.parentNode) el.parentNode.removeChild(el);},3200);
+}
+function openModal(id){
+  const m=$(id); m.hidden=false;
+  const b=m.querySelector('button:not(:disabled)');
+  if(b) try{b.focus({preventScroll:true});}catch(e){}
+}
+function closeModal(id){$(id).hidden=true;}
+
+/* ---------- HUD ---------- */
+function doneCount(){return S.done.filter(Boolean).length;}
+function renderHUD(){
+  const dc=doneCount();
+  $('hudCrate').textContent=(S.idx+1)+'/5';
+  $('hudDone').textContent=dc+'/5';
+  const ft=S.first.filter(Boolean).length;
+  $('hudAcc').textContent=dc?('%'+Math.round(100*ft/dc)):'—';
+  $('hudTry').textContent=S.attempts;
+  $('hudScore').textContent=S.score;
+  $('hudBar').style.width=(dc*20)+'%';
+}
+
+/* ---------- Sahne ---------- */
+function renderScene(){
+  $('crateNum').textContent=fmt(cur());
+  $('trainNum').textContent=fmt(cur());
+}
+function setSignal(state,txt){
+  const sg=$('signal');
+  sg.className='signal'+(state?' '+state:'');
+  $('signalTxt').textContent=txt;
+}
+function renderLamps(res){
+  // res: {ok:Set,bad:Set}
+  const h=PORTS.map(function(d){
+    let c='lamp';
+    if(res&&res.ok.has(d)) c+=' ok';
+    else if(res&&res.bad.has(d)) c+=' bad';
+    else if(S.sel.has(d)) c+=' sel';
+    return '<span class="'+c+'" title="Tünel '+d+'">'+d+'</span>';
+  }).join('');
+  $('lamps').innerHTML=h;
+}
+function runTrain(done){
+  const sc=$('scene'), tr=$('train');
+  if(trainAnim){trainAnim.cancel();trainAnim=null;}
+  const W=sc.clientWidth+tr.offsetWidth;
+  const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let finished=false;
+  const fin=function(){if(finished) return;finished=true;done();};
+  try{
+    trainAnim=tr.animate([{transform:'translateX(0)'},{transform:'translateX('+W+'px)'}],{duration:reduce?300:3600,easing:'ease-in-out',fill:'forwards'});
+    trainAnim.onfinish=fin;
+    setTimeout(fin,reduce?600:4200);
+  }catch(e){fin();}
+}
+function resetTrain(){
+  if(trainAnim){trainAnim.cancel();trainAnim=null;}
+}
+
+/* ---------- Araçlar ---------- */
+function renderNum(){
+  const s=String(cur()), len=s.length;
+  let h='';
+  for(let i=0;i<len;i++){
+    const fr=len-1-i;
+    if(i>0&&fr%3===2) h+='<span class="dot">.</span>';
+    let c='dg';
+    if(S.tl.lens&&fr===0) c+=' big';
+    if(S.tl.ring&&fr<2) c+=' ring '+(fr===1?'fl':'fr');
+    if(S.tl.scale){c+=' split'; if(i<=S.tl.idx) c+=' on';}
+    const attrs=fr===0?' role="button" tabindex="0" aria-label="Birler basamağı: büyüteci aç veya kapat"':'';
+    h+='<span class="'+c+'" data-i="'+i+'"'+attrs+'>'+s.charAt(i)+'</span>';
+  }
+  $('numBox').innerHTML=h;
+}
+function renderTools(){
+  const n=cur(), s=String(n), len=s.length, ds=s.split('').map(Number);
+  const last=ds[len-1], two=parseInt(s.slice(-2),10), tw=s.slice(-2);
+  const sum=ds.reduce(function(a,b){return a+b;},0);
+  let h='';
+  const b1=$('btnLens'), b2=$('btnRing'), b3=$('btnScale');
+  b1.classList.toggle('on',S.tl.lens); b1.setAttribute('aria-pressed',S.tl.lens?'true':'false');
+  b2.classList.toggle('on',S.tl.ring); b2.setAttribute('aria-pressed',S.tl.ring?'true':'false');
+  b3.classList.toggle('on',S.tl.scale); b3.setAttribute('aria-pressed',S.tl.scale?'true':'false');
+  if(S.tl.lens){
+    const c2=last%2===0, c5=last%5===0, c10=last===0;
+    const cands=[c2?2:0,c5?5:0,c10?10:0].filter(Boolean);
+    h+='<div class="tb"><h4>🔍 Canlı Büyüteç — Birler basamağı: <span style="color:var(--coral);font-family:var(--mono);font-size:1.1rem">'+last+'</span></h4>'+
+      '<span class="chip'+(c2?' lit':'')+'">2</span><span class="chip'+(c5?' lit':'')+'">5</span><span class="chip'+(c10?' lit':'')+'">10</span>'+
+      '<div>'+(cands.length?'Parlayan tüneller <b>aday</b>: '+cands.join(', ')+'. 10 için birler basamağı 0 olmalı; 2 ve 5 ile birlikte düşün.':'Birler basamağı 2, 5 ve 10 için uygun değil: bu üç tünel aday değil.')+'</div></div>';
+  }
+  if(S.tl.ring){
+    const ok4=two%4===0;
+    h+='<div class="tb"><h4>⭕ Çift Halka — Son iki basamak: <span style="font-family:var(--mono);font-size:1.1rem">'+tw+'</span></h4>'+
+      '<span class="chip'+(ok4?' lit':'')+'">4</span> '+
+      (ok4?(two===0?'00, 4\'ün katıdır ✔':tw+' ÷ 4 = '+(two/4)+' → 4\'ün katı ✔ (4 tüneli aday)'):(two+' ÷ 4 işleminde kalan '+(two%4)+' ✘ (4 tüneli aday değil)'))+'</div>';
+  }
+  if(S.tl.scale){
+    const up=Math.max(-1,Math.min(S.tl.idx,len-1));
+    const fin=up>=len-1;
+    const part=ds.slice(0,up+1);
+    const ps=part.reduce(function(a,b){return a+b;},0);
+    h+='<div class="tb"><h4>⚖️ Rakam Terazisi</h4>'+
+      '<svg class="scl" viewBox="0 0 160 70" aria-hidden="true"><rect x="72" y="60" width="16" height="6" rx="2" fill="#0F172A"/><line x1="80" y1="22" x2="80" y2="60" stroke="#0F172A" stroke-width="3"/>'+
+      '<g class="beam'+(fin?' lvl':'')+'"><line x1="16" y1="22" x2="144" y2="22" stroke="#0F172A" stroke-width="3" stroke-linecap="round"/>'+
+      '<line x1="22" y1="22" x2="22" y2="40" stroke="#64748B"/><rect x="6" y="40" width="34" height="14" rx="4" fill="#F97316"/><text x="23" y="51" text-anchor="middle" font-size="10" font-weight="800" fill="#0F172A" font-family="monospace">'+(part.length?ps:0)+'</text>'+
+      '<line x1="138" y1="22" x2="138" y2="40" stroke="#64748B"/><rect x="121" y="40" width="34" height="14" rx="4" fill="#0D9488"/><text x="138" y="51" text-anchor="middle" font-size="9" font-weight="800" fill="#fff" font-family="monospace">'+(fin?sum:'?')+'</text></g></svg>'+
+      '<div class="sumln">'+(part.length?part.join(' + ')+(fin?' = '+sum:' + …'):'Rakamlar tartılıyor…')+'</div>';
+    if(fin){
+      const c3=sum%3===0, c9=sum%9===0;
+      h+='<div style="margin-top:.3rem"><span class="chip'+(c3?' lit':'')+'">3</span><span class="chip'+(c9?' lit':'')+'">9</span> Toplam '+sum+': '+
+        (c3?'3\'ün katı ✔':'3\'ün katı değil ✘')+' · '+(c9?'9\'un katı ✔':'9\'un katı değil ✘')+
+        (c3?'<br><span class="muted">Hatırlatma: 3 tüneli aday ise, sayı çiftse 6 tüneline de bak!</span>':'')+'</div>';
+    }
+    h+='</div>';
+  }
+  $('toolOut').innerHTML=h;
+}
+function resetTools(){
+  clearInterval(scaleTimer);
+  S.tl={lens:false,ring:false,scale:false,idx:-1};
+  renderNum(); renderTools();
+}
+function toggleLens(){S.tl.lens=!S.tl.lens;renderNum();renderTools();}
+function toggleRing(){S.tl.ring=!S.tl.ring;renderNum();renderTools();}
+function toggleScale(){
+  clearInterval(scaleTimer);
+  if(S.tl.scale){S.tl.scale=false;S.tl.idx=-1;renderNum();renderTools();return;}
+  S.tl.scale=true; S.tl.idx=-1;
+  renderNum(); renderTools();
+  const len=String(cur()).length;
+  scaleTimer=setInterval(function(){
+    S.tl.idx++;
+    renderNum(); renderTools();
+    if(S.tl.idx>=len-1) clearInterval(scaleTimer);
+  },450);
+}
+
+/* ---------- Ray haritası ---------- */
+function mapInfo(){
+  const sel=Array.from(S.map).sort(function(a,b){return a-b;});
+  const box=$('mapInfo');
+  if(!sel.length){box.innerHTML='<p>🔦 Yukarıdan bir tünel seç. Örneğin <b>2</b> ve <b>3</b>\'ü birlikte seçip ortak katlara bak!</p>';return;}
+  const has=function(x){return S.map.has(x);};
+  const msgs=[];
+  if(sel.length>1){
+    const L=lcmAll(sel);
+    if(L<=100){
+      const list=[]; for(let v=L;v<=100&&list.length<6;v+=L) list.push(v);
+      msgs.push('Seçili tünellerin ortak katları <span class="key">'+L+'\'nin katlarıdır</span>: '+list.join(', ')+(L*7<=100?'…':'')+' (turuncu, ×'+L+' etiketli).');
+    }else msgs.push('Bu tünellerin ortak katı 100\'ün içinde yok.');
+  }
+  if(has(6)||(has(2)&&has(3))) msgs.push('<span class="key">2 ve 3 kesişince 6 doğar:</span> 6\'nın katları hem 2 hem 3\'e bölünür!');
+  if(has(10)||(has(2)&&has(5))) msgs.push('<span class="key">10\'un katları hem 2 hem 5\'e bölünür:</span> hepsi 0 ile biter.');
+  if(has(4)) msgs.push('4\'ün katları aynı zamanda <span class="key">2\'nin de katıdır</span> (4 = 2 × 2).');
+  if(has(9)) msgs.push('9\'un katları aynı zamanda <span class="key">3\'ün de katıdır</span> (9 = 3 × 3).');
+  if(has(5)&&!has(10)) msgs.push('5\'in katlarının birler basamağı <span class="key">0 veya 5</span>\'tir.');
+  if(sel.length===1&&has(2)) msgs.push('2\'nin katları çift sayılardır: sonları 0, 2, 4, 6, 8.');
+  if(sel.length===1&&has(3)) msgs.push('3\'ün katlarında rakamlar toplamı da 3\'ün katıdır (ör. 27 → 2 + 7 = 9).');
+  let any=0;
+  for(let v=1;v<=100;v++){ if(sel.some(function(d){return v%d===0;})) any++; }
+  box.innerHTML=msgs.map(function(m){return '<p>💡 '+m+'</p>';}).join('')+'<p>Aydınlanan sayı adedi: <b>'+any+'</b></p>';
+}
+function updateMap(){
+  const sel=Array.from(S.map), cells=$('rails').children;
+  S.mapFlip=S.mapFlip?0:1;
+  const L=sel.length>1?lcmAll(sel):0;
+  for(let i=0;i<100;i++){
+    const v=i+1, el=cells[i];
+    const any=sel.some(function(d){return v%d===0;});
+    const all=sel.length>0&&sel.every(function(d){return v%d===0;});
+    let st='';
+    if(any) st=sel.length===1?'lit':(all?'x':'part');
+    const sig=st+(st==='x'?L:'');
+    if(el.dataset.sig===sig) continue;
+    el.dataset.sig=sig;
+    el.classList.remove('lit','part','x');
+    el.removeAttribute('data-tag');
+    el.style.transitionDelay=(i*10)+'ms';
+    if(st){ el.classList.add(st); if(st==='x') el.dataset.tag=String(L); }
+  }
+  mapInfo();
+}
+function toggleMap(d){
+  if(S.map.has(d)) S.map.delete(d); else S.map.add(d);
+  const b=$('mapBtns').querySelector('[data-d="'+d+'"]');
+  if(b) b.setAttribute('aria-pressed',S.map.has(d)?'true':'false');
+  updateMap();
+}
+function clearMap(){
+  S.map.clear();
+  const bs=$('mapBtns').querySelectorAll('.mbtn[data-d]');
+  for(let i=0;i<bs.length;i++) bs[i].setAttribute('aria-pressed','false');
+  updateMap();
+}
+
+/* ---------- Tüneller & tren ---------- */
+function renderSwitches(res){
+  const btns=$('switches').children;
+  for(let i=0;i<btns.length;i++){
+    const b=btns[i], d=Number(b.dataset.d);
+    b.classList.remove('ok','bad');
+    b.setAttribute('aria-pressed',S.sel.has(d)?'true':'false');
+    let lab='';
+    if(res&&res.ok.has(d)){b.classList.add('ok');lab='DOĞRU ✓';}
+    else if(res&&res.bad.has(d)){b.classList.add('bad');lab='RAYDAN ÇIKTI ✗';}
+    else if(S.sel.has(d)) lab='ÇEVRİLDİ';
+    b.querySelector('small').textContent=lab;
+    b.disabled=S.locked||S.running;
+  }
+}
+function toggleSwitch(d){
+  if(S.locked||S.running) return;
+  if(S.sel.has(d)) S.sel.delete(d); else S.sel.add(d);
+  renderSwitches(null); renderLamps(null);
+  setSignal('','Sinyal: Bekliyor');
+}
+function card(type,title,text){
+  return '<div class="card '+type+'"><b class="t">'+title+'</b>'+text+'</div>';
+}
+function drive(){
+  if(S.locked||S.running) return;
+  if(S.sel.size===0){
+    $('reason').innerHTML=card('warn','⚠️ Önce makası çevir','En az bir tünel anahtarını çevirmelisin. Dedektif araçlarını kullanarak sandık numarasını incele!');
+    return;
+  }
+  const n=cur();
+  S.attempts++; S.crateTries++;
+  const need=PORTS.filter(function(d){return n%d===0;});
+  const picked=Array.from(S.sel);
+  const right=picked.filter(function(d){return n%d===0;});
+  const wrong=picked.filter(function(d){return n%d!==0;});
+  const missing=need.filter(function(d){return !S.sel.has(d);});
+  const res={ok:new Set(right),bad:new Set(wrong)};
+  renderSwitches(res); renderLamps(res);
+  const tr=$('train');
+  if(!wrong.length&&!missing.length){
+    S.locked=true; S.running=true;
+    renderSwitches(res);
+    setSignal('ok','Sinyal: Yeşil');
+    const firstTry=S.crateTries===1;
+    S.done[S.idx]=true; S.first[S.idx]=firstTry;
+    const pts=50+(firstTry?30:0);
+    S.score+=pts;
+    $('reason').innerHTML=
+      card('ok','🟢 Tüm tüneller doğru bağlandı!','Sandık '+fmt(n)+' şu tünellere bölünür: <b>'+need.join(', ')+'</b>. Tren yola çıkıyor… (+'+pts+' puan'+(firstTry?', ilk denemede doğru bonusu dahil':'')+')')+
+      right.map(function(d){return card('ok','✓ Tünel '+d,explain(n,d).text);}).join('');
+    renderHUD();
+    runTrain(function(){
+      S.running=false;
+      $('btnNext').disabled=false;
+      $('btnNext').textContent=S.idx===4?'Değerlendirmeye Geç ▶':'Sonraki Sandık ▶';
+      $('btnDrive').disabled=true;
+      renderSwitches(res);
+      toast('Sandık teslim edildi!','ok');
+    });
+  }else{
+    setSignal('bad','Sinyal: Kırmızı');
+    tr.classList.remove('derail'); void tr.offsetWidth; tr.classList.add('derail');
+    let h='';
+    wrong.forEach(function(d){h+=card('bad','🔴 Tünel '+d+': raydan çıkma ikazı',explain(n,d).text);});
+    if(right.length) h+=card('ok','🟢 Doğru bağlananlar','Tünel '+right.join(', ')+' doğru. Bunları değiştirmene gerek yok.');
+    if(missing.length){
+      let tip='Büyüteç';
+      if(missing.some(function(d){return d===3||d===9||d===6;})) tip='Rakam Terazisi';
+      else if(missing.indexOf(4)>=0) tip='Çift Halka';
+      h+=card('warn','🟠 '+missing.length+' tünel daha açık kalmış olabilir','Henüz bağlamadığın, ama sandığın bölündüğü tünel(ler) var. '+(wrong.length?'Önce kırmızı olanları düzelt, sonra ':'')+tip+'\'ni kullanarak yeniden incele.');
+    }
+    $('reason').innerHTML=h;
+  }
+}
+function updateNextBtn(){
+  $('btnNext').disabled=true;
+  $('btnNext').textContent=S.idx===4?'Değerlendirmeye Geç ▶':'Sonraki Sandık ▶';
+}
+function startCrate(i){
+  S.idx=i; S.sel=new Set(); S.locked=false; S.running=false; S.crateTries=0;
+  resetTrain();
+  $('train').classList.remove('derail');
+  setSignal('','Sinyal: Bekliyor');
+  $('btnDrive').disabled=false;
+  updateNextBtn();
+  $('reason').innerHTML=card('info','🧭 Yeni sandık geldi','Sandık '+fmt(cur())+' hangi tünellere tam bölünüyor? Araçları kullan, anahtarları çevir ve treni sür.');
+  renderScene(); renderLamps(null); renderSwitches(null); resetTools(); renderHUD();
+}
+function goNext(){
+  if(!S.locked||S.running) return;
+  if(S.idx<4) startCrate(S.idx+1); else openTree();
+}
+
+/* ---------- Karar ağacı ---------- */
+function openTree(){
+  T.step=0; T.wrong=false; T.done=false; T.firstTry=[true,true];
+  renderTree();
+  openModal('treeModal');
+}
+function renderTree(){
+  let h='<div class="tnode root">🚉 Son Kontrol İstasyonu</div>';
+  STEPS.forEach(function(st,i){
+    const state=i<T.step?'ok':((i===T.step&&!T.done)?(T.wrong?'bad':'active'):'');
+    h+='<div class="tline '+(i<=T.step?'on':'')+'"></div>';
+    h+='<div class="tnode '+state+'"><span class="tn">Adım '+(i+1)+'</span>'+st.q+(state==='ok'?' <b style="color:#047857">✔</b>':'')+'</div>';
+    h+='<div class="flex gap-6"><span class="tbranch ok">'+(i<T.step?'✔ Doğru dalı seçildi':'Doğru dalı')+'</span><span class="tbranch bad">'+(i===T.step&&T.wrong?'✖ Yanlış dalı':'Yanlış dalı')+'</span></div>';
+    if(i===T.step&&T.wrong&&!T.done) h+='<div class="tnode remedy">💡 '+st.bad+'</div>';
+  });
+  h+='<div class="tline '+(T.done?'on':'')+'"></div><div class="tnode '+(T.done?'final':'')+'">🏅 Usta Hat Makinisti Rozeti</div>';
+  $('treeBox').innerHTML=h;
+  const ctl=$('treeCtl');
+  if(T.done){
+    ctl.innerHTML='<button class="btn btn-primary" data-act="badge">Rozetimi Gör ▶</button>';
+  }else if(T.wrong){
+    ctl.innerHTML='<button class="btn btn-teal" data-act="retry">↺ Tekrar Dene</button>';
+  }else{
+    const st=STEPS[T.step];
+    ctl.innerHTML='<p style="margin:0 0 .5rem;font-weight:800;color:var(--navy)">'+st.q+'</p><div class="flex gap-2"><button class="btn btn-ok" data-act="true">✔ Doğru</button><button class="btn btn-bad" data-act="false">✖ Yanlış</button></div>';
+  }
+}
+function treeAnswer(val){
+  const st=STEPS[T.step];
+  if(val===st.ans){
+    toast(st.ok,'ok');
+    T.step++; T.wrong=false;
+    if(T.step>=STEPS.length){T.done=true;S.score+=100;renderHUD();}
+  }else{
+    T.wrong=true; T.firstTry[T.step]=false;
+  }
+  renderTree();
+}
+
+/* ---------- Rozet ---------- */
+function renderBadge(){
+  const dc=doneCount(), ft=S.first.filter(Boolean).length;
+  const tf=T.firstTry.filter(Boolean).length;
+  $('badgeBody').innerHTML=
+    '<div class="badge-art"><svg width="170" height="170" viewBox="0 0 170 170" role="img" aria-label="Usta Hat Makinisti Rozeti">'+
+    '<circle cx="85" cy="80" r="66" fill="#0F172A"/><circle cx="85" cy="80" r="58" fill="none" stroke="#F97316" stroke-width="4"/>'+
+    '<circle cx="85" cy="80" r="50" fill="#0D9488"/>'+
+    '<text x="85" y="96" text-anchor="middle" font-size="52">🚂</text>'+
+    '<path d="M42 132 L85 144 L128 132 L128 158 L85 150 L42 158 Z" fill="#F97316" stroke="#0F172A" stroke-width="2"/>'+
+    '<text x="85" y="150" text-anchor="middle" font-size="9" font-weight="800" fill="#0F172A" font-family="sans-serif">USTA HAT MAKİNİSTİ</text></svg></div>'+
+    '<p style="margin:0;text-align:center;font-weight:800;color:var(--navy);font-size:1.05rem">Antik hazine sandıklarının hepsi güvenle teslim edildi! 🎉</p>'+
+    '<div class="statgrid"><div class="sg"><small>Teslim Edilen Sandık</small><b>'+dc+'/5</b></div><div class="sg"><small>İlk Denemede Doğru</small><b>'+ft+'/5</b></div><div class="sg"><small>Toplam Deneme</small><b>'+S.attempts+'</b></div><div class="sg"><small>Hazine Puanı</small><b>'+S.score+'</b></div></div>'+
+    '<p class="muted" style="margin:0 0 .6rem">Karar ağacında ilk denemede doğru: '+tf+'/2. Her sandıkta kurallarla düşünmen seni usta yaptı!</p>'+
+    '<div class="flex flex-wrap gap-2"><button class="btn btn-coral" data-act="again">↺ Yeniden Oyna</button><button class="btn btn-ghost" data-act="close">Kapat</button></div>';
+}
+function resetGame(){
+  clearInterval(scaleTimer); resetTrain();
+  freshState();
+  S.crates=buildCrates();
+  closeModal('treeModal'); closeModal('badgeModal');
+  clearMap();
+  startCrate(0);
+}
+
+/* ---------- Başlatma ---------- */
+function init(){
+  freshState();
+  S.crates=buildCrates();
+
+  $('switches').innerHTML=PORTS.map(function(d){
+    return '<button type="button" class="sw" data-d="'+d+'" aria-pressed="false" aria-label="Tünel '+d+' anahtarı"><span style="font-size:.62rem;font-weight:700">TÜNEL</span><b>'+d+'</b><i class="led"></i><small></small></button>';
+  }).join('');
+  $('mapBtns').innerHTML=PORTS.map(function(d){
+    return '<button type="button" class="mbtn" data-d="'+d+'" aria-pressed="false">'+d+'</button>';
+  }).join('')+'<button type="button" class="mbtn" id="mapClear" style="font-family:inherit">Temizle</button>';
+  let cells='';
+  for(let v=1;v<=100;v++) cells+='<div class="cell" role="gridcell">'+v+'</div>';
+  $('rails').innerHTML=cells;
+  $('ruleCards').innerHTML=PORTS.map(function(d){
+    return '<details class="rule"><summary>'+d+' ile bölünebilme</summary><p>'+RULE_CARDS[d]+'</p></details>';
+  }).join('');
+
+  $('switches').addEventListener('click',function(e){
+    const b=e.target.closest('.sw'); if(!b) return;
+    toggleSwitch(Number(b.dataset.d));
+  });
+  $('mapBtns').addEventListener('click',function(e){
+    if(e.target.closest('#mapClear')){clearMap();return;}
+    const b=e.target.closest('.mbtn[data-d]'); if(!b) return;
+    toggleMap(Number(b.dataset.d));
+  });
+  $('numBox').addEventListener('click',function(e){
+    const d=e.target.closest('.dg');
+    if(d&&Number(d.dataset.i)===String(cur()).length-1) toggleLens();
+  });
+  $('numBox').addEventListener('keydown',function(e){
+    if(e.key!=='Enter'&&e.key!==' ') return;
+    const d=e.target.closest('.dg');
+    if(d&&d.getAttribute('role')==='button'){e.preventDefault();toggleLens();}
+  });
+  $('btnLens').addEventListener('click',toggleLens);
+  $('btnRing').addEventListener('click',toggleRing);
+  $('btnScale').addEventListener('click',toggleScale);
+  $('btnDrive').addEventListener('click',drive);
+  $('btnNext').addEventListener('click',goNext);
+  $('treeCtl').addEventListener('click',function(e){
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    const a=b.dataset.act;
+    if(a==='true') treeAnswer(true);
+    else if(a==='false') treeAnswer(false);
+    else if(a==='retry'){T.wrong=false;renderTree();}
+    else if(a==='badge'){closeModal('treeModal');renderBadge();openModal('badgeModal');}
+  });
+  $('badgeBody').addEventListener('click',function(e){
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    if(b.dataset.act==='again') resetGame(); else closeModal('badgeModal');
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&!$('badgeModal').hidden) closeModal('badgeModal');
+  });
+
+  updateMap();
+  startCrate(0);
+}
+
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+})();
+</script>
+</body>
+</html>
