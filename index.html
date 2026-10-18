@@ -257,7 +257,35 @@ details.rule p{margin:0;padding:0 .7rem .55rem;font-size:.82rem}
 </main>
 
 <div id="toasts" aria-live="polite"></div>
+<!-- Giriş bilgi kutusu -->
+<div class="modal" id="introModal" role="dialog" aria-modal="true" aria-labelledby="introT">
+  <div class="sheet modal-card" style="max-width:560px">
+    <div class="sheet-h" id="introT">🚂 Antik Hazine Ekspresi'ne Hoş Geldin!</div>
+    <div class="sheet-b">
+      <p style="margin:0 0 .6rem">Sen bu trenin <b>hat makinistisin</b>. Trenin taşıdığı sandıkların üzerinde bir numara var. Tren, antik tünelden ancak <b>doğru tünel anahtarları</b> çevrilirse geçer.</p>
 
+      <div class="tb"><h4>🎯 Görevin</h4>
+        Sandık numarası hangi sayılara <b>tam bölünüyorsa</b> (kalan 0 ise) o tünellerin anahtarını çevir. Tüneller: 2, 3, 4, 5, 6, 9 ve 10.</div>
+
+      <div class="tb"><h4>🧰 Uzun bölme yapmana gerek yok!</h4>
+        Dedektif araçlarıyla sayıya bakarak karar verirsin:
+        <ul style="margin:.3rem 0 0 1.1rem;padding:0">
+          <li><b>🔍 Büyüteç:</b> birler basamağına bakar (2, 5, 10)</li>
+          <li><b>⭕ Çift Halka:</b> son iki basamağa bakar (4)</li>
+          <li><b>⚖️ Rakam Terazisi:</b> rakamları toplar (3 ve 9)</li>
+        </ul></div>
+
+      <div class="tb"><h4>🚦 Nasıl oynanır?</h4>
+        1. Sandık numarasını incele.<br>
+        2. Doğru olduğunu düşündüğün tünel anahtarlarını çevir.<br>
+        3. <b>“Makası Çevir &amp; Treni Sür”</b> düğmesine bas.<br>
+        4. Yeşil yanarsa doğru bildin! Kırmızı yanarsa nedenini sana anlatırız, tekrar deneyebilirsin.</div>
+
+      <p class="muted" style="margin:.7rem 0">⏱️ Süre yok, puan kaybı yok. Acele etme, merak et ve keşfet! Ray Haritası'nda katları da inceleyebilirsin.</p>
+      <button class="btn btn-ok" id="btnIntroStart" style="width:100%">Anladım, Yola Çıkalım! 🚂</button>
+    </div>
+  </div>
+</div>
 <!-- Değerlendirme -->
 <div class="modal" id="treeModal" role="dialog" aria-modal="true" aria-labelledby="treeT" hidden>
   <div class="sheet modal-card">
@@ -770,8 +798,14 @@ function init(){
     if(e.key==='Escape'&&!$('badgeModal').hidden) closeModal('badgeModal');
   });
 
+  $('btnIntroStart').addEventListener('click',function(){closeModal('introModal');});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'&&!$('introModal').hidden) closeModal('introModal');
+  });
+
   updateMap();
   startCrate(0);
+  openModal('introModal');
 }
 
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
